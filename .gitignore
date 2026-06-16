@@ -1,0 +1,31 @@
+# Dependencias
+node_modules/
+
+# Salida generada
+*.docx
+test.docx
+
+# Logs
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+*.log
+
+# Temporales de Mermaid / sistema
+md2docx-mermaid-*/
+*.tmp
+
+# Entorno
+.env
+.env.local
+
+# Artefactos del sistema operativo
+.DS_Store
+Thumbs.db
+
+# Editores
+.vscode/
+.idea/
+*.swp
+
+*.claude

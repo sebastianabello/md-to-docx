@@ -1,0 +1,33 @@
+{
+  "name": "md-to-docx",
+  "version": "1.0.0",
+  "description": "CLI que convierte Markdown a DOCX profesional con soporte para diagramas Mermaid",
+  "type": "commonjs",
+  "main": "convert.js",
+  "bin": {
+    "md-to-docx": "convert.js"
+  },
+  "scripts": {
+    "convert": "node convert.js",
+    "test:sample": "node convert.js test.md test.docx --title \"Guía de Estudio DevOps\""
+  },
+  "keywords": [
+    "markdown",
+    "docx",
+    "word",
+    "mermaid",
+    "converter",
+    "cli"
+  ],
+  "license": "MIT",
+  "dependencies": {
+    "docx": "^8.5.0",
+    "marked": "^12.0.0"
+  },
+  "optionalDependencies": {
+    "@mermaid-js/mermaid-cli": "^10.9.0"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}
