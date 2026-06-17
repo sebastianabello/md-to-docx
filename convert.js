@@ -20,6 +20,7 @@ const {
   Packer,
   Paragraph,
   TextRun,
+  PageBreak,
   Header,
   Footer,
   PageNumber,
@@ -39,21 +40,60 @@ const DEFAULT_TITLE = "Guía de Estudio DevOps";
 function parseArgs(argv) {
   const positional = [];
   let title = DEFAULT_TITLE;
+  let docTitle = null;
+  let subtitle = null;
+  let output = null;
+
+  // Lee el valor de una opción tanto en forma "--opt valor" como "--opt=valor".
+  const readValue = (arg, i, name) => {
+    if (arg === `--${name}` || (name.length === 1 && arg === `-${name}`)) {
+      return { value: argv[i + 1], skip: true };
+    }
+    if (arg.startsWith(`--${name}=`)) {
+      return { value: arg.slice(`--${name}=`.length), skip: false };
+    }
+    return null;
+  };
+
   for (let i = 0; i < argv.length; i += 1) {
     const arg = argv[i];
-    if (arg === "--title" || arg === "-t") {
-      title = argv[i + 1] || title;
-      i += 1;
-    } else if (arg.startsWith("--title=")) {
-      title = arg.slice("--title=".length);
-    } else if (arg === "--help" || arg === "-h") {
-      positional.length = 0;
-      return { help: true };
+    if (arg === "--help" || arg === "-h") return { help: true };
+
+    let m;
+    if ((m = readValue(arg, i, "title")) || (m = readValue(arg, i, "t"))) {
+      title = m.value || title;
+    } else if (
+      (m = readValue(arg, i, "doc-title")) ||
+      (m = readValue(arg, i, "d"))
+    ) {
+      docTitle = m.value || docTitle;
+    } else if (
+      (m = readValue(arg, i, "subtitle")) ||
+      (m = readValue(arg, i, "s"))
+    ) {
+      subtitle = m.value || subtitle;
+    } else if (
+      (m = readValue(arg, i, "output")) ||
+      (m = readValue(arg, i, "o"))
+    ) {
+      output = m.value || output;
     } else {
       positional.push(arg);
+      continue;
     }
+    if (m.skip) i += 1;
   }
-  return { input: positional[0], output: positional[1], title };
+
+  // Si no se pasó -o/--output, el último posicional es el archivo de salida.
+  let inputs;
+  if (output) {
+    inputs = positional;
+  } else {
+    output = positional.pop();
+    inputs = positional;
+  }
+
+  return { inputs, output, title, docTitle, subtitle };
 }
 
 function printUsage() {
@@ -61,11 +101,19 @@ function printUsage() {
 md-to-docx — Conversor de Markdown a DOCX profesional
 
 Uso:
-  node convert.js <input.md> <output.docx> [--title "Texto del header"]
+  node convert.js <input.md> [más.md ...] <output.docx> [opciones]
+  node convert.js <input.md> [más.md ...] -o <output.docx> [opciones]
 
 Opciones:
-  -t, --title    Texto del encabezado de página (default: "${DEFAULT_TITLE}")
-  -h, --help     Muestra esta ayuda
+  -t, --title       Texto del encabezado de cada página (default: "${DEFAULT_TITLE}")
+  -d, --doc-title   Título del documento mostrado en la portada (primera hoja)
+  -s, --subtitle    Subtítulo de la portada (opcional, junto a --doc-title)
+  -o, --output      Archivo .docx de salida (alternativa al último posicional)
+  -h, --help        Muestra esta ayuda
+
+Ejemplos:
+  node convert.js guia.md salida.docx --title "Mi Curso"
+  node convert.js cap1.md cap2.md cap3.md -o libro.docx -d "Manual DevOps" -s "Edición 2026"
 `);
 }
 
@@ -140,43 +188,69 @@ function maybeValidate(outputPath) {
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
-  const { input, output, title, help } = parseArgs(process.argv.slice(2));
+  const { inputs, output, title, docTitle, subtitle, help } = parseArgs(
+    process.argv.slice(2)
+  );
 
   if (help) {
     printUsage();
     return;
   }
-  if (!input || !output) {
+  if (!inputs || inputs.length === 0 || !output) {
     printUsage();
-    throw new Error("Faltan argumentos: <input.md> y <output.docx> son obligatorios.");
+    throw new Error(
+      "Faltan argumentos: al menos un <input.md> y un <output.docx>."
+    );
   }
-  if (!fs.existsSync(input)) {
-    throw new Error(`El archivo de entrada no existe: ${input}`);
+  for (const f of inputs) {
+    if (!fs.existsSync(f)) {
+      throw new Error(`El archivo de entrada no existe: ${f}`);
+    }
   }
-
-  const markdown = fs.readFileSync(input, "utf8");
-  const { tokens, cover, hasExplicitToc } = parse(markdown);
 
   const numbering = new NumberingManager();
   const warnings = [];
   const renderer = new Renderer({
     numbering,
-    baseDir: path.dirname(path.resolve(input)),
+    baseDir: process.cwd(),
     warn: (m) => {
       warnings.push(m);
       console.warn(m);
     },
   });
 
+  // Parseamos cada archivo. La portada solo se autodetecta en el primero y
+  // únicamente si no se proporcionó --doc-title.
+  const parsed = inputs.map((file, i) => {
+    const markdown = fs.readFileSync(file, "utf8");
+    const detectCover = i === 0 && !docTitle;
+    return { file, ...parse(markdown, { detectCover }) };
+  });
+
+  const anyExplicitToc = parsed.some((p) => p.hasExplicitToc);
+
   const children = [];
-  if (cover) children.push(...renderer.renderCover(cover));
-  // Si no hay [TOC] explícito, insertamos uno automático tras la portada.
-  if (!hasExplicitToc) children.push(...renderer.renderToc());
-  children.push(...renderer.renderTokens(tokens));
+
+  // Portada: --doc-title tiene prioridad sobre la detección automática.
+  if (docTitle) {
+    children.push(...renderer.renderCoverText(docTitle, subtitle));
+  } else if (parsed[0].cover) {
+    children.push(...renderer.renderCover(parsed[0].cover));
+  }
+
+  // Índice automático (una sola vez) si ningún archivo trae [TOC] explícito.
+  if (!anyExplicitToc) children.push(...renderer.renderToc());
+
+  // Contenido de cada archivo, con salto de página entre documentos.
+  parsed.forEach((p, i) => {
+    renderer.baseDir = path.dirname(path.resolve(p.file));
+    if (i > 0) children.push(new Paragraph({ children: [new PageBreak()] }));
+    children.push(...renderer.renderTokens(p.tokens));
+  });
 
   const doc = new Document({
     creator: "md-to-docx",
-    title,
+    title: docTitle || title,
     styles: S.buildStyles(),
     numbering: { config: numbering.getConfig() },
     sections: [

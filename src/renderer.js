@@ -695,30 +695,68 @@ class Renderer {
   }
 
   // --- Portada ------------------------------------------------------------
+  /** Portada a partir de tokens (H1 + H2 detectados en el Markdown). */
   renderCover(cover) {
-    return [
-      new Paragraph({ spacing: { before: 2400 }, children: [] }),
-      new Paragraph({
-        alignment: AlignmentType.CENTER,
-        spacing: { after: 240 },
-        children: this.inlineRuns(cover.title.tokens, {
+    return this.buildCover(
+      this.inlineRuns(cover.title.tokens, {
+        font: S.FONTS.HEAD,
+        size: S.SIZES.COVER_TITLE,
+        color: S.COLORS.PRIMARY,
+        bold: true,
+      }),
+      cover.subtitle
+        ? this.inlineRuns(cover.subtitle.tokens, {
+            font: S.FONTS.HEAD,
+            size: S.SIZES.COVER_SUBTITLE,
+            color: S.COLORS.ACCENT,
+          })
+        : null
+    );
+  }
+
+  /** Portada a partir de texto plano (parámetros --doc-title / --subtitle). */
+  renderCoverText(title, subtitle) {
+    return this.buildCover(
+      [
+        makeRun(title, {
           font: S.FONTS.HEAD,
           size: S.SIZES.COVER_TITLE,
           color: S.COLORS.PRIMARY,
           bold: true,
         }),
-      }),
+      ],
+      subtitle
+        ? [
+            makeRun(subtitle, {
+              font: S.FONTS.HEAD,
+              size: S.SIZES.COVER_SUBTITLE,
+              color: S.COLORS.ACCENT,
+            }),
+          ]
+        : null
+    );
+  }
+
+  buildCover(titleRuns, subtitleRuns) {
+    const out = [
+      new Paragraph({ spacing: { before: 2400 }, children: [] }),
       new Paragraph({
         alignment: AlignmentType.CENTER,
         spacing: { after: 240 },
-        children: this.inlineRuns(cover.subtitle.tokens, {
-          font: S.FONTS.HEAD,
-          size: S.SIZES.COVER_SUBTITLE,
-          color: S.COLORS.ACCENT,
-        }),
+        children: titleRuns,
       }),
-      new Paragraph({ children: [new PageBreak()] }),
     ];
+    if (subtitleRuns) {
+      out.push(
+        new Paragraph({
+          alignment: AlignmentType.CENTER,
+          spacing: { after: 240 },
+          children: subtitleRuns,
+        })
+      );
+    }
+    out.push(new Paragraph({ children: [new PageBreak()] }));
+    return out;
   }
 }
 

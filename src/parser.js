@@ -72,9 +72,13 @@ function classifyBlockquote(token) {
  * Parsea el Markdown y detecta portada + TOC explícito.
  *
  * @param {string} markdown
+ * @param {object} [opts]
+ * @param {boolean} [opts.detectCover=true]  si false, no detecta portada (útil
+ *        para archivos que no son el primero al concatenar varios documentos).
  * @returns {{ tokens: object[], cover: {title: object, subtitle: object}|null, hasExplicitToc: boolean }}
  */
-function parse(markdown) {
+function parse(markdown, opts = {}) {
+  const { detectCover = true } = opts;
   const tokens = marked.lexer(markdown);
 
   // --- Detección de portada: primer H1 seguido (ignorando espacios) de un H2 ---
@@ -83,6 +87,7 @@ function parse(markdown) {
 
   const idxFirst = tokens.findIndex((t) => t.type !== "space");
   if (
+    detectCover &&
     idxFirst !== -1 &&
     tokens[idxFirst].type === "heading" &&
     tokens[idxFirst].depth === 1

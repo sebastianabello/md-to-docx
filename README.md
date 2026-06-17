@@ -29,23 +29,38 @@ npm install -g @mermaid-js/mermaid-cli   # provee el binario `mmdc`
 ## Uso
 
 ```bash
-node convert.js <input.md> <output.docx> [--title "Texto del header"]
+node convert.js <input.md> [más.md ...] <output.docx> [opciones]
+node convert.js <input.md> [más.md ...] -o <output.docx> [opciones]
 ```
 
-Ejemplo:
+Ejemplos:
 
 ```bash
+# Un archivo, con encabezado de página personalizado
 node convert.js test.md test.docx --title "Guía de Estudio DevOps"
-# o con el script de npm:
-npm run test:sample
+
+# Varios archivos combinados en un único .docx, con portada y subtítulo
+node convert.js cap1.md cap2.md cap3.md -o libro.docx \
+  --doc-title "Manual DevOps" --subtitle "Edición 2026" --title "Curso DevOps"
 ```
+
+Al combinar varios archivos se insertan saltos de página entre ellos y se
+genera una única portada e índice; la numeración de listas es consistente en
+todo el documento.
 
 ### Opciones
 
-| Opción          | Descripción                                              |
-| --------------- | ------------------------------------------------------- |
-| `-t, --title`   | Texto del encabezado de página (default: "Guía de Estudio DevOps") |
-| `-h, --help`    | Muestra la ayuda                                        |
+| Opción            | Descripción                                                      |
+| ----------------- | --------------------------------------------------------------- |
+| `-t, --title`     | Texto del **encabezado de cada página** (default: "Guía de Estudio DevOps") |
+| `-d, --doc-title` | **Título del documento en la portada** (primera hoja)           |
+| `-s, --subtitle`  | Subtítulo de la portada (junto a `--doc-title`)                  |
+| `-o, --output`    | Archivo `.docx` de salida (alternativa al último posicional)     |
+| `-h, --help`      | Muestra la ayuda                                                 |
+
+> **Portada:** si pasas `--doc-title`, se usa como portada. Si no, se detecta
+> automáticamente cuando el primer archivo empieza con un `# Título` seguido de
+> un `## Subtítulo`.
 
 ## Elementos soportados
 
