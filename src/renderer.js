@@ -57,6 +57,24 @@ function commentPrefixes(lang) {
   return ["#"];
 }
 
+/**
+ * Decodifica las entidades HTML que marked introduce en los tokens inline
+ * (texto normal y codespan): &quot; &amp; &lt; &gt; &#39; y numéricas. Los
+ * bloques de código cercados NO pasan por aquí porque marked los deja crudos.
+ */
+function decodeEntities(str) {
+  if (!str) return str;
+  return str
+    .replace(/&#(\d+);/g, (_, n) => String.fromCodePoint(Number(n)))
+    .replace(/&#x([0-9a-fA-F]+);/g, (_, h) => String.fromCodePoint(parseInt(h, 16)))
+    .replace(/&lt;/g, "<")
+    .replace(/&gt;/g, ">")
+    .replace(/&quot;/g, '"')
+    .replace(/&apos;/g, "'")
+    .replace(/&nbsp;/g, " ")
+    .replace(/&amp;/g, "&"); // &amp; al final para no re-decodificar
+}
+
 function isCommentLine(line, prefixes) {
   const t = line.trimStart();
   if (!t) return false;
@@ -170,7 +188,7 @@ class Renderer {
           if (tk.tokens && tk.tokens.length) {
             runs.push(...this.inlineRuns(tk.tokens, opts));
           } else {
-            runs.push(makeRun(tk.text, opts));
+            runs.push(makeRun(decodeEntities(tk.text), opts));
           }
           break;
         case "strong":
@@ -184,7 +202,7 @@ class Renderer {
           break;
         case "codespan":
           runs.push(
-            makeRun(tk.text, {
+            makeRun(decodeEntities(tk.text), {
               font: S.FONTS.MONO,
               size: S.SIZES.CODE,
               color: S.COLORS.INLINE_CODE,
@@ -215,10 +233,10 @@ class Renderer {
           break;
         case "escape":
         case "html":
-          runs.push(makeRun(tk.text, opts));
+          runs.push(makeRun(decodeEntities(tk.text), opts));
           break;
         default:
-          if (tk.text) runs.push(makeRun(tk.text, opts));
+          if (tk.text) runs.push(makeRun(decodeEntities(tk.text), opts));
       }
     }
     return runs;
@@ -515,7 +533,7 @@ class Renderer {
       const runs =
         cell && cell.tokens
           ? this.inlineRuns(cell.tokens, runOpts)
-          : [makeRun((cell && cell.text) || "", runOpts)];
+          : [makeRun(decodeEntities((cell && cell.text) || ""), runOpts)];
       return new TableCell({
         width: { size: columnWidths[colIdx], type: WidthType.DXA },
         margins: cellMargins,
@@ -647,7 +665,7 @@ class Renderer {
           const runs =
             child.tokens && child.tokens.length
               ? this.inlineRuns(child.tokens)
-              : [makeRun(child.text || "")];
+              : [makeRun(decodeEntities(child.text || ""))];
           if (!lineUsed) {
             out.push(
               new Paragraph({ numbering: { reference: ref, level }, children: runs })
