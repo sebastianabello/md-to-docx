@@ -23,6 +23,7 @@ bloque de código con una etiqueta `📊 Diagrama (sintaxis Mermaid)`.
 Para habilitar el renderizado de Mermaid a imagen:
 
 ```bash
+sudo apt install -y chromium fonts-liberation ca-certificates
 npm install -g @mermaid-js/mermaid-cli   # provee el binario `mmdc`
 ```
 
