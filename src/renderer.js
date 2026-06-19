@@ -489,6 +489,15 @@ class Renderer {
         }),
       ];
       if (res.title) out.push(this.captionParagraph(res.title));
+      // Además de la imagen, incluimos el código fuente del diagrama por si la
+      // imagen queda pequeña o se distorsiona al ampliarla.
+      out.push(
+        ...this.renderCodeBlock(token, {
+          label: `📊 Código del diagrama (Mermaid)${
+            res.title ? ` — ${res.title}` : ""
+          }`,
+        })
+      );
       return out;
     }
 

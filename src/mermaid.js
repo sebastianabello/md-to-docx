@@ -91,9 +91,11 @@ function renderMermaid(code) {
 
   try {
     fs.writeFileSync(inPath, code, "utf8");
+    // `-s 3` renderiza a 3x de resolución para que el PNG se vea nítido al
+    // ampliarlo en Word (y agranda los diagramas pequeños sin distorsión).
     const result = spawnSync(
       mmdc,
-      ["-i", inPath, "-o", outPath, "-b", "white"],
+      ["-i", inPath, "-o", outPath, "-b", "white", "-s", "3"],
       { stdio: "ignore", timeout: 60000 }
     );
 

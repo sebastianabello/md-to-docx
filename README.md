@@ -17,8 +17,10 @@ npm install
 
 Esto instala las dependencias principales (`docx`, `marked`). El renderizado de
 Mermaid es **opcional**: si `@mermaid-js/mermaid-cli` y un Chrome/Chromium están
-disponibles, los diagramas se renderizan como PNG; si no, se insertan como
-bloque de código con una etiqueta `📊 Diagrama (sintaxis Mermaid)`.
+disponibles, los diagramas se renderizan como PNG (a 3x de resolución para que se
+vean nítidos al ampliarlos) **y además se incluye su código fuente debajo**, por
+si la imagen resulta pequeña. Si no hay Chrome, se insertan solo como bloque de
+código con una etiqueta `📊 Diagrama (sintaxis Mermaid)`.
 
 Para habilitar el renderizado de Mermaid a imagen:
 
