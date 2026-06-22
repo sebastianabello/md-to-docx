@@ -15,6 +15,22 @@ const path = require("path");
 const { spawnSync } = require("child_process");
 
 /**
+ * Devuelve el ejecutable de Chrome/Chromium del sistema si puppeteer no tiene
+ * uno propio en caché. mmdc v11+ usa puppeteer-core, que no descarga Chrome
+ * automáticamente; sin esta variable falla con "Could not find Chrome".
+ * @returns {string|undefined}
+ */
+function findSystemChrome() {
+  const candidates = [
+    "/usr/bin/chromium",
+    "/usr/bin/chromium-browser",
+    "/usr/bin/google-chrome",
+    "/usr/bin/google-chrome-stable",
+  ];
+  return candidates.find((p) => fs.existsSync(p));
+}
+
+/**
  * Localiza el binario `mmdc`. Prioriza el instalado localmente en
  * node_modules/.bin; si no, confía en el PATH.
  * @returns {string|null} ruta o nombre del binario, o null si no se encuentra.
@@ -93,19 +109,26 @@ function renderMermaid(code) {
     fs.writeFileSync(inPath, code, "utf8");
     // `-s 3` renderiza a 3x de resolución para que el PNG se vea nítido al
     // ampliarlo en Word (y agranda los diagramas pequeños sin distorsión).
+    const env = { ...process.env };
+    if (!env.PUPPETEER_EXECUTABLE_PATH) {
+      const chrome = findSystemChrome();
+      if (chrome) env.PUPPETEER_EXECUTABLE_PATH = chrome;
+    }
+
     const result = spawnSync(
       mmdc,
       ["-i", inPath, "-o", outPath, "-b", "white", "-s", "3"],
-      { stdio: "ignore", timeout: 60000 }
+      { stdio: "pipe", timeout: 60000, env }
     );
 
     if (result.error) {
       return { ok: false, error: result.error.message, title };
     }
     if (result.status !== 0 || !fs.existsSync(outPath)) {
+      const detail = result.stderr ? result.stderr.toString().trim().split("\n")[0] : "";
       return {
         ok: false,
-        error: `mmdc terminó con código ${result.status}`,
+        error: `mmdc terminó con código ${result.status}${detail ? ": " + detail : ""}`,
         title,
       };
     }
