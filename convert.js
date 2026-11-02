@@ -43,6 +43,7 @@ function parseArgs(argv) {
   let docTitle = null;
   let subtitle = null;
   let output = null;
+  let html = null;
 
   // Lee el valor de una opción tanto en forma "--opt valor" como "--opt=valor".
   const readValue = (arg, i, name) => {
@@ -77,6 +78,8 @@ function parseArgs(argv) {
       (m = readValue(arg, i, "o"))
     ) {
       output = m.value || output;
+    } else if ((m = readValue(arg, i, "html"))) {
+      html = m.value || html;
     } else {
       positional.push(arg);
       continue;
@@ -93,27 +96,33 @@ function parseArgs(argv) {
     inputs = positional;
   }
 
-  return { inputs, output, title, docTitle, subtitle };
+  return { inputs, output, title, docTitle, subtitle, html };
 }
 
 function printUsage() {
   console.log(`
-md-to-docx — Conversor de Markdown a DOCX profesional
+md-to-docx — Conversor de Markdown a DOCX o PDF
 
 Uso:
-  node convert.js <input.md> [más.md ...] <output.docx> [opciones]
-  node convert.js <input.md> [más.md ...] -o <output.docx> [opciones]
+  node convert.js <input.md> [más.md ...] <output.docx|output.pdf> [opciones]
+  node convert.js <input.md> [más.md ...] -o <output.docx|output.pdf> [opciones]
+  node convert.js <carpeta-curso> -o <output.pdf>
+
+La extensión de salida decide el formato. En PDF se aceptan carpetas: cada
+subcarpeta es un módulo y su index.md aporta los títulos.
 
 Opciones:
-  -t, --title       Texto del encabezado de cada página (default: "${DEFAULT_TITLE}")
+  -t, --title       Texto del encabezado de cada página en DOCX (default: "${DEFAULT_TITLE}")
   -d, --doc-title   Título del documento mostrado en la portada (primera hoja)
   -s, --subtitle    Subtítulo de la portada (opcional, junto a --doc-title)
-  -o, --output      Archivo .docx de salida (alternativa al último posicional)
+  -o, --output      Archivo de salida (alternativa al último posicional)
+      --html        (PDF) Guarda también el HTML intermedio en esta ruta
   -h, --help        Muestra esta ayuda
 
 Ejemplos:
   node convert.js guia.md salida.docx --title "Mi Curso"
   node convert.js cap1.md cap2.md cap3.md -o libro.docx -d "Manual DevOps" -s "Edición 2026"
+  node convert.js ~/wiki/psoe -o psoe.pdf
 `);
 }
 
@@ -185,12 +194,41 @@ function maybeValidate(outputPath) {
 }
 
 // ---------------------------------------------------------------------------
+// Salida PDF
+// ---------------------------------------------------------------------------
+async function convertToPdf({ inputs, output, docTitle, subtitle, html: debugHtml }) {
+  const { buildHtml, escapeHtml } = require("./src/pdf/build");
+  const { printPdf } = require("./src/pdf/print");
+  const { renderMermaid } = require("./src/mermaid");
+
+  const mermaidHtml = (code) => {
+    const res = renderMermaid(code);
+    if (!res.ok) {
+      console.warn(`⚠️  Mermaid no renderizado (${res.error}); se incluye el código.`);
+      return `<pre class="codigo"><code>${escapeHtml(code)}</code></pre>`;
+    }
+    const caption = res.title ? `<figcaption>${escapeHtml(res.title)}</figcaption>` : "";
+    return `<figure class="diagrama"><img src="data:image/png;base64,${res.buffer.toString(
+      "base64"
+    )}" style="width:${Math.round(res.width / 3)}px" alt="">${caption}</figure>`;
+  };
+
+  console.log("🧱 Componiendo el documento...");
+  const { html, modules } = buildHtml({ inputs, docTitle, subtitle, renderMermaid: mermaidHtml });
+  const tabbed = modules.length > 1 && modules.every((m) => m.num) ? modules.length : 0;
+
+  console.log("🖨️  Paginando e imprimiendo con Chrome (puede tardar con documentos largos)...");
+  const { pages } = await printPdf(html, output, { moduleCount: tabbed, debugHtml });
+  const size = fs.statSync(output).size;
+  console.log(`✅ PDF generado: ${output} (${pages} páginas, ${(size / 1024 / 1024).toFixed(1)} MB)`);
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 async function main() {
-  const { inputs, output, title, docTitle, subtitle, help } = parseArgs(
-    process.argv.slice(2)
-  );
+  const args = parseArgs(process.argv.slice(2));
+  const { inputs, output, title, docTitle, subtitle, help } = args;
 
   if (help) {
     printUsage();
@@ -206,6 +244,11 @@ async function main() {
     if (!fs.existsSync(f)) {
       throw new Error(`El archivo de entrada no existe: ${f}`);
     }
+  }
+
+  if (output.toLowerCase().endsWith(".pdf")) {
+    await convertToPdf(args);
+    return;
   }
 
   const numbering = new NumberingManager();

@@ -148,4 +148,9 @@ function renderMermaid(code) {
   }
 }
 
-module.exports = { renderMermaid, extractTitle, isMermaidAvailable: () => findMmdc() !== null };
+module.exports = {
+  renderMermaid,
+  extractTitle,
+  findSystemChrome,
+  isMermaidAvailable: () => findMmdc() !== null,
+};

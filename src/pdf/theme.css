@@ -1,0 +1,562 @@
+/*
+ * theme.css — Diseño del PDF (paginado con Paged.js).
+ *
+ * Idea: la carpeta de anillas de un analista. Cada módulo tiene una pestaña
+ * en el borde derecho, a una altura propia, para localizarlo hojeando. Todo lo
+ * demás es sobrio: serif de lectura para el cuerpo, Archivo para la
+ * estructura, y amarillo de marcador solo en «Claves para el examen».
+ */
+
+:root {
+  --tinta: #1f2633;
+  --pizarra: #5e6878;
+  --indigo: #3437a8;
+  --indigo-velo: #f1f1fb;
+  --marcador: #ffe45c;
+  --marcador-borde: #e8b500;
+  --linea: #d9dce3;
+  --niebla: #f4f5f8;
+
+  --serif: "Literata", "Charter", Georgia, serif;
+  --sans: "Archivo", "Liberation Sans", sans-serif;
+  --ancha: "Archivo Ancha", var(--sans);
+  --compacta: "Archivo Compacta", var(--sans);
+  --mono: "JetBrains Mono", "DejaVu Sans Mono", monospace;
+}
+
+/* ------------------------------------------------------------------ páginas */
+
+@page {
+  size: A4;
+  margin: 24mm 26mm 22mm 28mm;
+
+  @top-left {
+    content: string(titulo, first-except);
+    font-family: var(--sans);
+    font-size: 7.5pt;
+    color: var(--pizarra);
+    vertical-align: bottom;
+    padding-bottom: 5mm;
+  }
+  @top-right {
+    content: string(modulo);
+    font-family: var(--sans);
+    font-size: 7.5pt;
+    color: var(--pizarra);
+    vertical-align: bottom;
+    padding-bottom: 5mm;
+  }
+  @bottom-right {
+    content: counter(page);
+    font-family: var(--sans);
+    font-weight: 600;
+    font-size: 8pt;
+    color: var(--tinta);
+    vertical-align: top;
+    padding-top: 6mm;
+  }
+}
+
+@page portada {
+  margin: 0;
+  @top-left { content: none; }
+  @top-right { content: none; }
+  @bottom-right { content: none; }
+}
+
+@page separador {
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+
+@page indice {
+  @top-left { content: none; }
+  @top-right { content: none; }
+}
+
+.pagedjs_page { position: relative; }
+
+/* --------------------------------------------------------------- base */
+
+html {
+  font-family: var(--serif);
+  font-size: 9.8pt;
+  line-height: 1.55;
+  color: var(--tinta);
+  hyphens: auto;
+  /* Sin negritas/cursivas simuladas: Chrome las incrusta como Type 3. */
+  font-synthesis: none;
+  -webkit-print-color-adjust: exact;
+  print-color-adjust: exact;
+}
+
+body { margin: 0; }
+
+p { margin: 0 0 2.6mm; orphans: 3; widows: 3; }
+
+strong { font-weight: 600; }
+
+a { color: inherit; text-decoration: none; }
+
+ul, ol { margin: 0 0 3mm; padding-left: 5mm; }
+li { margin-bottom: 1.2mm; }
+li > p { margin-bottom: 1mm; }
+li::marker { color: var(--indigo); }
+ul ul, ol ol, ul ol, ol ul { margin: 1mm 0 0; }
+
+hr { border: 0; border-top: 0.5pt solid var(--linea); margin: 6mm 0; }
+
+code {
+  font-family: var(--mono);
+  font-size: 0.84em;
+  background: var(--niebla);
+  border-radius: 2px;
+  padding: 0.05em 0.28em;
+  hyphens: none;
+  overflow-wrap: anywhere;
+}
+
+/* --------------------------------------------------------------- pestañas */
+
+/* La pestaña del módulo: se inyecta en cada página (print.js) y en la portada. */
+.pestana,
+.pestana-pagina {
+  position: absolute;
+  right: 0;
+  width: 11mm;
+  height: calc((297mm - 48mm) / var(--modulos) - 1.6mm);
+  top: calc(24mm + var(--i) * (297mm - 48mm) / var(--modulos));
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding-left: 1mm;
+  box-sizing: border-box;
+  border-radius: 2mm 0 0 2mm;
+  font-family: var(--sans);
+  font-family: var(--ancha);
+  font-weight: 800;
+  font-size: 9pt;
+  letter-spacing: 0.02em;
+  color: #fff;
+  background: var(--indigo);
+}
+
+/* ---------------------------------------------------------------- portada */
+
+.portada {
+  page: portada;
+  position: relative;
+  height: 297mm;
+  box-sizing: border-box;
+  padding: 26mm 34mm 30mm 28mm;
+  display: flex;
+  flex-direction: column;
+}
+
+.portada-sub {
+  font-family: var(--sans);
+  font-size: 12pt;
+  font-weight: 500;
+  color: var(--pizarra);
+  max-width: 110mm;
+  line-height: 1.3;
+  margin: 0;
+}
+
+.portada-titulo {
+  margin: auto 0 6mm;
+  font-family: var(--sans);
+  font-family: var(--ancha);
+  font-weight: 900;
+  line-height: 0.8;
+  letter-spacing: -0.02em;
+  color: var(--indigo);
+  margin-left: -1.5mm; /* compensa el lado izquierdo de la primera letra */
+  hyphens: none;
+}
+
+.portada-intro {
+  font-style: italic;
+  font-size: 14pt;
+  line-height: 1.35;
+  max-width: 120mm;
+  margin: 0 0 14mm;
+}
+
+.portada-fecha {
+  font-family: var(--sans);
+  font-size: 8.5pt;
+  color: var(--pizarra);
+  margin: 0;
+}
+
+/* En la portada se ven todas las pestañas: es el índice de solapas. */
+.portada-pestanas .pestana { opacity: 0.92; }
+
+/* ----------------------------------------------------------------- índice */
+
+.indice { page: indice; break-before: page; }
+
+.indice-titulo {
+  font-family: var(--sans);
+  font-family: var(--ancha);
+  font-weight: 800;
+  font-size: 26pt;
+  line-height: 1;
+  margin: 0 0 10mm;
+}
+
+.toc-grupo { break-inside: avoid; margin-bottom: 5mm; }
+
+.toc-modulo {
+  margin: 0 0 1.5mm;
+  font-family: var(--sans);
+  font-size: 10.5pt;
+  font-weight: 700;
+}
+
+.toc-modulo a,
+.toc-lista a {
+  display: flex;
+  align-items: baseline;
+  gap: 4mm;
+}
+
+.toc-num {
+  flex: 0 0 8mm;
+  color: var(--indigo);
+  font-family: var(--ancha);
+  font-weight: 800;
+}
+
+.toc-texto { flex: 1; }
+
+.toc-modulo a::after,
+.toc-lista a::after {
+  content: target-counter(attr(href url), page);
+  font-family: var(--sans);
+  font-variant-numeric: tabular-nums;
+  font-size: 8.5pt;
+  font-weight: 600;
+  color: var(--tinta);
+}
+
+.toc-lista {
+  list-style: none;
+  padding: 0 0 0 12mm;
+  margin: 0;
+  font-family: var(--sans);
+  font-size: 8.8pt;
+  line-height: 1.35;
+}
+
+.toc-lista li { margin-bottom: 1.1mm; }
+.toc-lista a::after { color: var(--pizarra); font-weight: 500; }
+
+/* --------------------------------------------------- separador de módulo */
+
+.separador { page: separador; break-before: page; }
+
+.separador-num {
+  margin: 4mm 0 0;
+  font-family: var(--sans);
+  font-family: var(--ancha);
+  font-weight: 900;
+  font-size: 120pt;
+  line-height: 0.8;
+  letter-spacing: -0.03em;
+  color: var(--indigo);
+}
+
+.separador-titulo {
+  font-family: var(--sans);
+  font-weight: 800;
+  font-size: 24pt;
+  line-height: 1.1;
+  letter-spacing: -0.01em;
+  margin: 8mm 0 12mm;
+  max-width: 140mm;
+  hyphens: manual;
+  string-set: modulo content(text);
+}
+
+.separador-lista {
+  list-style: none;
+  margin: 0;
+  padding: 6mm 0 0;
+  border-top: 1.2pt solid var(--tinta);
+}
+
+.separador-lista li { margin-bottom: 4.5mm; break-inside: avoid; }
+
+.separador-lista a {
+  display: flex;
+  align-items: baseline;
+  gap: 4mm;
+  font-family: var(--sans);
+  font-size: 10pt;
+  font-weight: 700;
+  line-height: 1.25;
+}
+
+.separador-lista a::after {
+  content: target-counter(attr(href url), page);
+  margin-left: auto;
+  font-size: 8.5pt;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+}
+
+.separador-lista p {
+  margin: 1mm 12mm 0 0;
+  font-size: 8.4pt;
+  line-height: 1.45;
+  color: var(--pizarra);
+}
+
+/* ---------------------------------------------------------------- artículo */
+
+.articulo { break-before: page; }
+
+.articulo-cabecera {
+  border-bottom: 0.6pt solid var(--tinta);
+  padding-bottom: 4mm;
+  margin-bottom: 6mm;
+}
+
+.articulo-titulo {
+  string-set: titulo content(text);
+  font-family: var(--sans);
+  font-weight: 700;
+  font-size: 20pt;
+  line-height: 1.12;
+  letter-spacing: -0.012em;
+  margin: 0 0 3mm;
+  hyphens: manual;
+}
+
+.articulo-meta {
+  display: flex;
+  gap: 5mm;
+  font-family: var(--sans);
+  font-size: 8pt;
+  color: var(--pizarra);
+  margin: 0;
+}
+
+/* La entrada (texto antes del primer H2) se lee un punto más grande. */
+.entrada > p:first-child { font-size: 10.8pt; line-height: 1.5; }
+
+h2, h3, h4 {
+  font-family: var(--sans);
+  break-after: avoid;
+  hyphens: manual;
+}
+
+h2 {
+  font-size: 12.5pt;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--indigo);
+  margin: 7mm 0 2.5mm;
+}
+
+h3 {
+  font-size: 10.2pt;
+  font-weight: 700;
+  line-height: 1.25;
+  margin: 5mm 0 1.5mm;
+}
+
+h4 {
+  font-size: 9.4pt;
+  font-weight: 600;
+  color: var(--pizarra);
+  margin: 4mm 0 1mm;
+}
+
+/* Referencias internas: llevan su página para poder seguirlas en papel. */
+a.xref { color: var(--indigo); }
+a.xref::after {
+  content: "\00a0p.\00a0" target-counter(attr(href url), page);
+  font-family: var(--sans);
+  font-size: 0.78em;
+  font-weight: 600;
+  color: var(--pizarra);
+}
+
+a.ext { color: var(--indigo); text-decoration: underline; text-decoration-thickness: 0.4pt; text-underline-offset: 1.5pt; }
+
+sup.ref {
+  font-family: var(--sans);
+  font-size: 6.5pt;
+  font-weight: 600;
+  line-height: 0;
+  vertical-align: 0.5em;
+  margin-left: 0.1em;
+}
+sup.ref a { color: var(--indigo); }
+
+/* ------------------------------------------------------------ secciones */
+
+/* Claves para el examen: subrayadas con marcador, como en los apuntes. */
+.seccion--examen {
+  margin-top: 7mm;
+  padding-left: 4.5mm;
+  border-left: 1.2mm solid var(--marcador);
+}
+.seccion--examen h2 { color: var(--tinta); }
+.seccion--examen h2 span {
+  background: linear-gradient(transparent 45%, var(--marcador) 45%);
+  padding: 0 1mm;
+  margin-left: -1mm;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+
+/* Verificación con la documentación oficial: bloque aparte, más pequeño. */
+.seccion--verificacion {
+  margin-top: 7mm;
+  padding: 4mm 5mm 2mm;
+  background: var(--indigo-velo);
+  border-radius: 1.5mm;
+  font-size: 9pt;
+  break-inside: avoid;
+  -webkit-box-decoration-break: clone;
+  box-decoration-break: clone;
+}
+.seccion--verificacion h2 { margin-top: 0; font-size: 10.5pt; color: var(--tinta); }
+
+.seccion--ver-tambien,
+.seccion--fuentes {
+  font-family: var(--sans);
+  font-size: 8.4pt;
+  line-height: 1.4;
+}
+.seccion--ver-tambien h2,
+.seccion--fuentes h2 {
+  font-size: 8.4pt;
+  font-weight: 700;
+  color: var(--pizarra);
+  margin: 7mm 0 2mm;
+  padding-top: 3mm;
+  border-top: 0.5pt solid var(--linea);
+}
+.seccion--ver-tambien + .seccion--fuentes h2 { border-top: 0; padding-top: 0; margin-top: 5mm; }
+.seccion--ver-tambien ul { list-style: none; padding: 0; }
+.seccion--ver-tambien li { margin-bottom: 1mm; }
+
+.notas {
+  color: var(--pizarra);
+  padding-left: 5mm;
+  font-size: 7.6pt;
+  line-height: 1.4;
+}
+.notas li { margin-bottom: 1mm; }
+.notas li::marker { font-weight: 600; }
+.notas code { font-size: 0.92em; background: none; padding: 0; overflow-wrap: anywhere; }
+
+/* ---------------------------------------------------------------- notas */
+
+.nota {
+  margin: 4mm 0;
+  padding: 0.5mm 0 0.5mm 4mm;
+  break-inside: avoid;
+}
+.nota p:last-child { margin-bottom: 0; }
+
+/* Discrepancias y erratas de la fuente: apartes discretos. */
+.nota--fuente {
+  border-left: 0.8pt solid var(--pizarra);
+  font-size: 8.8pt;
+  color: #3d4554;
+}
+.nota--fuente strong:first-child {
+  font-family: var(--sans);
+  font-size: 0.95em;
+  font-weight: 700;
+}
+
+.nota--aviso {
+  border-left: 1.2mm solid var(--marcador-borde);
+  background: #fffbe8;
+  padding: 2.5mm 4mm;
+}
+
+.nota--consejo {
+  border-left: 1.2mm solid var(--indigo);
+  background: var(--indigo-velo);
+  padding: 2.5mm 4mm;
+}
+
+.nota--cita {
+  border-left: 0.8pt solid var(--indigo);
+  font-style: italic;
+}
+
+/* --------------------------------------------------------------- tablas */
+
+.tabla { margin: 3.5mm 0 5mm; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  font-family: var(--sans);
+  font-family: var(--compacta);
+  font-size: 8.3pt;
+  line-height: 1.38;
+  hyphens: auto;
+}
+
+thead th {
+  text-align: left;
+  vertical-align: bottom;
+  font-weight: 700;
+  padding: 1.4mm 2mm 1.6mm;
+  border-bottom: 1pt solid var(--tinta);
+}
+
+td {
+  vertical-align: top;
+  padding: 1.6mm 2mm;
+  border-bottom: 0.4pt solid var(--linea);
+}
+
+tbody tr:nth-child(even) td { background: #f7f8fa; }
+tr { break-inside: avoid; }
+td:first-child { font-weight: 600; }
+td strong { font-weight: 700; }
+/* Archivo Compacta no tiene cursiva: los términos en cursiva toman la de Literata. */
+table em { font-family: var(--serif); font-style: italic; font-size: 1.04em; }
+th:first-child, td:first-child { padding-left: 1mm; }
+
+/* ---------------------------------------------------------------- código */
+
+pre.codigo {
+  margin: 3.5mm 0 5mm;
+  padding: 3mm 4mm;
+  background: var(--niebla);
+  border-radius: 1.5mm;
+  font-family: var(--mono);
+  font-size: 7.8pt;
+  line-height: 1.5;
+  white-space: pre-wrap;
+  overflow-wrap: anywhere;
+  hyphens: none;
+}
+pre.codigo code { background: none; padding: 0; font-size: inherit; }
+
+/* --------------------------------------------------------------- figuras */
+
+figure.diagrama { margin: 4mm 0 5mm; break-inside: avoid; text-align: center; }
+figure.diagrama img { max-width: 100%; max-height: 190mm; }
+figure.diagrama figcaption {
+  font-family: var(--sans);
+  font-size: 8pt;
+  color: var(--pizarra);
+  margin-top: 2mm;
+}
+
+img { max-width: 100%; }
+
+.xref-roto { color: var(--pizarra); }

@@ -22,7 +22,9 @@
   "license": "MIT",
   "dependencies": {
     "docx": "^8.5.0",
-    "marked": "^12.0.0"
+    "marked": "^12.0.0",
+    "pagedjs": "^0.4.3",
+    "puppeteer-core": "^25.16.0"
   },
   "optionalDependencies": {
     "@mermaid-js/mermaid-cli": "^10.9.0"

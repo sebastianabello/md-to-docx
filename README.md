@@ -1,7 +1,7 @@
 # md-to-docx
 
 CLI en Node.js que convierte archivos Markdown (`.md`) a documentos Word
-(`.docx`) **con diseño profesional**: tipografía cuidada, paleta de colores
+(`.docx`) o a PDF **con diseño profesional**: tipografía cuidada, paleta de colores
 coherente, cajas de advertencia/tip/concepto, tablas formateadas, bloques de
 código monoespaciados y diagramas **Mermaid** renderizados como imágenes.
 
@@ -65,6 +65,57 @@ todo el documento.
 > automáticamente cuando el primer archivo empieza con un `# Título` seguido de
 > un `## Subtítulo`.
 
+## Salida PDF
+
+Si el archivo de salida termina en `.pdf`, se genera un PDF maquetado con
+Chrome headless + [Paged.js](https://pagedjs.org) (en vez de pasar por Word).
+Además de archivos sueltos, acepta **una carpeta de curso**: cada subcarpeta es
+un módulo, y su `index.md` aporta el título de la portada, los nombres de los
+módulos y la descripción de cada artículo.
+
+```bash
+node convert.js ~/Documents/proyectos/brain/wiki/psoe -o psoe.pdf
+node convert.js apunte.md apunte.pdf --html debug.html   # guarda el HTML intermedio
+```
+
+Lo que añade el PDF:
+
+- **Pestañas de módulo** en el borde derecho, cada una a su altura (como las
+  solapas de una carpeta de anillas); la portada muestra todas.
+- **Índice y separadores de módulo** con números de página reales.
+- **Wikilinks de Obsidian** (`[[ruta.md|Etiqueta]]`) convertidos en enlaces
+  internos con su página («p. 34»); **notas `[^n]`** enlazadas a «Fuentes»;
+  el **frontmatter** YAML se usa como metadatos y no se imprime.
+- Secciones con tratamiento propio: «Claves para el examen» (marcador
+  amarillo), «Verificación con la documentación oficial», «Ver también» y
+  «Fuentes»; apartes para discrepancias y erratas de la fuente.
+- Tipografía incrustada (Literata, Archivo y JetBrains Mono, licencia OFL):
+  el PDF se ve igual en cualquier equipo.
+
+### Fuentes del PDF
+
+Las fuentes viven en `assets/fonts/` como **instancias estáticas** (un `.ttf`
+por grosor y anchura). No se usan las variables directamente porque Chrome
+las incrusta en el PDF como *Type 3*, y muchos visores muestran esas letras
+recortadas. Por la misma razón el CSS usa `font-synthesis: none`: una negrita
+o cursiva *simulada* también acaba en Type 3, así que cada grosor que use el
+CSS debe existir como archivo.
+
+Para regenerarlas (p. ej. para añadir un grosor), descarga las fuentes
+variables de [google/fonts](https://github.com/google/fonts) (`ofl/literata`,
+`ofl/archivo`, `ofl/jetbrainsmono`) a una carpeta y ejecuta:
+
+```bash
+uv run --with fonttools python scripts/build-fonts.py <carpeta>
+```
+
+Comprobación rápida: `pdffonts salida.pdf` no debería listar fuentes
+`Type 3` salvo `NotoColorEmoji` (los emoji en color siempre van así).
+
+El estilo vive en `src/pdf/theme.css`; la conversión, en `src/pdf/build.js`
+(Markdown → HTML) y `src/pdf/print.js` (HTML → PDF). Requiere Chrome o
+Chromium instalado (o `PUPPETEER_EXECUTABLE_PATH`).
+
 ## Elementos soportados
 
 - **Headings** H1–H3 (estilos built-in sobrescritos, con índice navegable).
@@ -97,7 +148,14 @@ todo el documento.
 ```
 md-to-docx/
 ├── convert.js          ← CLI principal
+├── assets/fonts/      ← Fuentes estáticas del PDF (OFL)
+├── scripts/
+│   └── build-fonts.py  ← Genera assets/fonts desde las fuentes variables
 ├── src/
+│   ├── pdf/
+│   │   ├── build.js    ← Markdown/carpeta de curso → HTML paginable
+│   │   ├── print.js    ← HTML → PDF (Chrome + Paged.js)
+│   │   └── theme.css   ← Diseño del PDF
 │   ├── styles.js       ← Constantes de diseño + estilos del documento
 │   ├── numbering.js    ← Referencias de numeración únicas por lista
 │   ├── mermaid.js      ← Renderizado Mermaid con fallback
